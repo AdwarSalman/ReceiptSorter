@@ -1,113 +1,85 @@
-"""
-tab_classify.py
-----------------
-Tab ini berfungsi untuk:
-1. Menerima input teks (hasil OCR atau manual)
-2. Melakukan klasifikasi kategori menggunakan:
-   - Best-First Search (heuristic kecocokan kata kunci)
-3. Menampilkan skor kategori dan kategori terbaik
-4. Menjalankan reasoning (Backward Chaining):
-   - Menampilkan token kunci yang menyebabkan kategori tersebut dipilih
-"""
-
 import customtkinter as ctk
-
 from core.search_classifier import classify_text
 from core.backward_chain import backward_reasoning
 
-
 class TabClassify(ctk.CTkFrame):
-    """
-    Kelas TabClassify menyediakan interface untuk:
-    - Memasukkan teks (dari OCR atau input manual)
-    - Menjalankan proses klasifikasi
-    - Menampilkan hasil
-    """
-
     def __init__(self, master):
-        super().__init__(master, fg_color="#101010")
+        super().__init__(master, fg_color="transparent") # Ikut warna background utama
 
-        # Layout
+        # Layout Grid 50:50
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # -------------------------------------------------------------
-        # FRAME KIRI: INPUT TEKS
-        # -------------------------------------------------------------
-        left_frame = ctk.CTkFrame(self, fg_color="#181818", corner_radius=10)
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        # ==========================================================
+        # KARTU KIRI: INPUT TEKS
+        # ==========================================================
+        left_card = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
+        left_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=10)
+        
+        left_card.grid_columnconfigure(0, weight=1)
+        left_card.grid_rowconfigure(1, weight=1)
 
-        title_left = ctk.CTkLabel(
-            left_frame,
-            text="Input Text for Classification",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        title_left.pack(pady=(15, 10))
+        # Header
+        lbl_left = ctk.CTkLabel(left_card, text="⌨️ Input Teks Struk", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
+        lbl_left.grid(row=0, column=0, pady=20)
 
-        # Textbox input
+        # Textbox Input (Background sedikit lebih gelap dari kartu)
         self.input_box = ctk.CTkTextbox(
-            left_frame,
-            width=350,
-            height=420,
-            fg_color="#202020",
-            text_color="#DDDDDD",
-            font=ctk.CTkFont(size=14)
+            left_card,
+            font=("Roboto", 14),
+            fg_color="#151515",
+            text_color="#E0E0E0",
+            corner_radius=10,
+            border_width=1,
+            border_color="#333333"
         )
-        self.input_box.pack(padx=10, pady=10, fill="both", expand=True)
+        self.input_box.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
 
-        # Tombol klasifikasi
+        # Tombol Klasifikasi (Warna Utama/Primary)
         classify_btn = ctk.CTkButton(
-            left_frame,
-            text="Run Classification",
+            left_card,
+            text="🔍 Analisis Kategori",
+            font=("Roboto", 15, "bold"),
+            height=45,
             fg_color="#7A3DB8",
             hover_color="#5A2B8A",
+            corner_radius=20, # Lebih bulat
             command=self.run_classification
         )
-        classify_btn.pack(pady=10)
+        classify_btn.grid(row=2, column=0, padx=20, pady=(0, 25), sticky="ew")
 
-        # -------------------------------------------------------------
-        # FRAME KANAN: HASIL KLASIFIKASI
-        # -------------------------------------------------------------
-        right_frame = ctk.CTkFrame(self, fg_color="#181818", corner_radius=10)
-        right_frame.grid(row=0, column=1, sticky="nsew", padx=15, pady=15)
+        # ==========================================================
+        # KARTU KANAN: HASIL KLASIFIKASI
+        # ==========================================================
+        right_card = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
+        right_card.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=10)
+        
+        right_card.grid_columnconfigure(0, weight=1)
+        right_card.grid_rowconfigure(1, weight=1)
 
-        title_right = ctk.CTkLabel(
-            right_frame,
-            text="Classification Result",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        title_right.pack(pady=(15, 10))
+        # Header
+        lbl_right = ctk.CTkLabel(right_card, text="📊 Hasil & Reasoning AI", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
+        lbl_right.grid(row=0, column=0, pady=20)
 
-        # Textbox untuk output AI
+        # Textbox Output (Menggunakan Font Monospace 'Consolas' agar tabel rapi)
         self.result_box = ctk.CTkTextbox(
-            right_frame,
-            width=350,
-            height=420,
-            fg_color="#202020",
-            text_color="#DDDDDD",
-            font=ctk.CTkFont(size=14)
+            right_card,
+            font=("Consolas", 14), 
+            fg_color="#151515",
+            text_color="#00E676", # Warna hijau matrix/terminal
+            corner_radius=10,
+            border_width=1,
+            border_color="#333333"
         )
-        self.result_box.pack(padx=10, pady=10, fill="both", expand=True)
+        self.result_box.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 25))
 
-    # ======================================================================
-    # FUNCTION: RUN CLASSIFICATION
-    # ======================================================================
     def run_classification(self):
-        """
-        - Ambil teks dari input box
-        - Jalankan classify_text() → Best-First Search
-        - Jalankan backward_reasoning() → token yang relevan
-        - Tampilkan:
-            * Skor tiap kategori
-            * Kategori terbaik
-            * Token kunci hasil reasoning
-        """
         text = self.input_box.get("0.0", "end").strip()
 
         if not text:
             self.result_box.delete("0.0", "end")
-            self.result_box.insert("0.0", "ERROR: Text input is empty.")
+            self.result_box.insert("0.0", "⚠️ ERROR: Text input is empty.")
             return
 
         # STEP 1 → Klasifikasi dengan heuristic
@@ -118,19 +90,21 @@ class TabClassify(ctk.CTkFrame):
 
         # Susun output yang rapi
         output = "=== CLASSIFICATION RESULT ===\n\n"
-        output += "Kategori terbaik: " + best_category.upper() + "\n\n"
+        output += f"🏆 KATEGORI TERBAIK: {best_category.upper()}\n"
+        output += "="*30 + "\n\n"
 
-        output += "--- Skor per kategori ---\n"
+        output += "--- Skor per Kategori ---\n"
+        # Format tabel rapi
         for k, v in score_table.items():
-            output += f"{k:<20} : {v}\n"
+            output += f"{k.ljust(25)} : {v}\n"
 
-        output += "\n--- Reasoning (Backward Chaining) ---\n"
+        output += "\n--- Reasoning (Why?) ---\n"
         if reasoning_tokens:
-            output += "Token pendukung kategori:\n"
+            output += "Token kata kunci ditemukan:\n"
             for token in reasoning_tokens:
-                output += f" - {token}\n"
+                output += f" ✅ {token}\n"
         else:
-            output += "Tidak ditemukan token pendukung.\n"
+            output += "⚠️ Tidak ditemukan keyword spesifik.\n(Skor mungkin 0 atau default)\n"
 
         # Munculkan di textbox
         self.result_box.delete("0.0", "end")

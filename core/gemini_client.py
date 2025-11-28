@@ -22,7 +22,7 @@ import requests
 # ==========================================================
 # MASUKKAN API KEY KAMU DI SINI
 # ==========================================================
-API_KEY = "AIzaSyBssOifHG_tygXeVVHfs7FdTp8mfW6xudU"
+API_KEY = "YOUR_GEMINI_API_KEY"
 
 # Endpoint Gemini generative AI (model 1.5 Flash gratis & cepat)
 # PERBAIKAN (Ganti bagian ini)
