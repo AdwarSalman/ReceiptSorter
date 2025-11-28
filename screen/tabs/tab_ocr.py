@@ -1,160 +1,125 @@
-"""
-tab_ocr.py
------------
-Tab OCR berfungsi untuk:
-1. Upload gambar struk
-2. Menampilkan preview gambar (250x250)
-3. Menjalankan proses OCR menggunakan modul core/ocr_processor.py
-4. Menampilkan hasil teks OCR di textbox
-5. Mengirim teks OCR ke tab Classification (opsional nanti)
-
-Desain UI:
-- Kiri: preview gambar + tombol upload
-- Kanan: Textbox OCR result + tombol run OCR
-"""
-
 import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
-# Import modul OCR dari folder core
 from core.ocr_processor import run_ocr
 
-
 class TabOCR(ctk.CTkFrame):
-    """
-    Kelas TabOCR adalah container GUI untuk proses OCR:
-    Upload → Preview → OCR → Tampilkan teks
-    """
-
     def __init__(self, master):
-        """
-        Konstruktor TabOCR
+        super().__init__(master, fg_color="transparent") # Transparan agar ikut warna induk
 
-        PARAMETER:
-        master : frame tab dari MainWindow
-        """
-        super().__init__(master, fg_color="#101010")
-
-        # ---------------------------------------------------------------
-        # CONFIG LAYOUT
-        # ---------------------------------------------------------------
-        self.grid_columnconfigure(0, weight=1)  # kolom sebelah kiri
-        self.grid_columnconfigure(1, weight=2)  # kolom kanan lebih lebar
+        # Grid utama
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1) # 50:50 ratio agar seimbang
         self.grid_rowconfigure(0, weight=1)
 
-        # Variabel internal
         self.loaded_image_path = None
-        self.preview_image = None  # untuk menahan image agar tidak garbage collected
+        self.preview_image = None
 
-        # ---------------------------------------------------------------
-        # FRAME KIRI: PREVIEW + UPLOAD BUTTON
-        # ---------------------------------------------------------------
-        left_frame = ctk.CTkFrame(self, fg_color="#181818", corner_radius=10)
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        # ==========================================================
+        # KARTU KIRI: IMAGE PREVIEW
+        # ==========================================================
+        left_card = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
+        left_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=10)
+        left_card.grid_columnconfigure(0, weight=1)
+        left_card.grid_rowconfigure(1, weight=1)
 
-        title_left = ctk.CTkLabel(
-            left_frame,
-            text="Receipt Image Preview",
-            font=ctk.CTkFont(size=18, weight="bold")
+        # Header Kartu Kiri
+        lbl_left = ctk.CTkLabel(left_card, text="📄 Preview Struk", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
+        lbl_left.grid(row=0, column=0, pady=20)
+
+        # Area Gambar (Dibuat seperti kotak putus-putus jika kosong)
+        self.image_container = ctk.CTkFrame(left_card, fg_color="#151515", corner_radius=10)
+        self.image_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
+        
+        self.image_label = ctk.CTkLabel(
+            self.image_container, 
+            text="Belum ada gambar dipilih\nKlik Upload Image", 
+            text_color="#555555",
+            font=("Roboto", 14)
         )
-        title_left.pack(pady=(15, 5))
+        self.image_label.pack(expand=True, fill="both", padx=10, pady=10)
 
-        # Tempat preview gambar
-        self.image_label = ctk.CTkLabel(left_frame, text="No Image", fg_color="#222222",
-                                        width=250, height=250, corner_radius=10)
-        self.image_label.pack(pady=10)
-
-        # Tombol Upload
+        # Tombol Upload (Style Outline/Secondary)
         upload_btn = ctk.CTkButton(
-            left_frame,
-            text="Upload Image",
-            fg_color="#7A3DB8",
-            hover_color="#5A2B8A",
+            left_card,
+            text="📂 Upload Image",
+            font=("Roboto", 14, "bold"),
+            height=40,
+            fg_color="transparent",
+            border_width=2,
+            border_color="#7A3DB8",
+            text_color="#7A3DB8",
+            hover_color="#2A2A2A",
             command=self.upload_image
         )
-        upload_btn.pack(pady=10)
+        upload_btn.grid(row=2, column=0, padx=20, pady=(0, 25), sticky="ew")
 
-        # ---------------------------------------------------------------
-        # FRAME KANAN: OCR RESULT
-        # ---------------------------------------------------------------
-        right_frame = ctk.CTkFrame(self, fg_color="#181818", corner_radius=10)
-        right_frame.grid(row=0, column=1, sticky="nsew", padx=15, pady=15)
+        # ==========================================================
+        # KARTU KANAN: OCR RESULT
+        # ==========================================================
+        right_card = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
+        right_card.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=10)
+        right_card.grid_columnconfigure(0, weight=1)
+        right_card.grid_rowconfigure(1, weight=1)
 
-        title_right = ctk.CTkLabel(
-            right_frame,
-            text="OCR Result (Extracted Text)",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        title_right.pack(pady=(15, 5))
+        # Header Kartu Kanan
+        lbl_right = ctk.CTkLabel(right_card, text="📝 Hasil Ekstraksi Teks", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
+        lbl_right.grid(row=0, column=0, pady=20)
 
-        # Textbox untuk hasil OCR
+        # Textbox Modern
         self.ocr_textbox = ctk.CTkTextbox(
-            right_frame,
-            width=400,
-            height=400,
-            fg_color="#202020",
-            text_color="#DDDDDD",
-            font=ctk.CTkFont(size=14)
+            right_card,
+            font=("Consolas", 14), # Font monospaced untuk data
+            fg_color="#151515",
+            text_color="#E0E0E0",
+            corner_radius=10,
+            border_width=1,
+            border_color="#333333"
         )
-        self.ocr_textbox.pack(padx=10, pady=10, fill="both", expand=True)
+        self.ocr_textbox.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
 
-        # Tombol OCR
+        # Tombol Run OCR (Style Solid/Primary)
         ocr_btn = ctk.CTkButton(
-            right_frame,
-            text="Run OCR",
+            right_card,
+            text="⚡ Jalankan OCR",
+            font=("Roboto", 14, "bold"),
+            height=40,
             fg_color="#7A3DB8",
             hover_color="#5A2B8A",
             command=self.run_ocr_process
         )
-        ocr_btn.pack(pady=10)
+        ocr_btn.grid(row=2, column=0, padx=20, pady=(0, 25), sticky="ew")
 
-    # ------------------------------------------------------------------
-    # FUNCTION: UPLOAD IMAGE
-    # ------------------------------------------------------------------
+    # --- (Fungsi logika upload_image dan run_ocr_process tetap sama seperti sebelumnya) ---
     def upload_image(self):
-        """
-        Fungsi untuk memilih gambar dari File Explorer.
-        Gambar harus JPG atau PNG.
-        Setelah dipilih → tampilkan preview.
-        """
-        path = filedialog.askopenfilename(
-            filetypes=[("Image Files", "*.jpg *.jpeg *.png")]
-        )
-
-        if not path:
-            return  # user tekan cancel
-
+        path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+        if not path: return
         self.loaded_image_path = path
-
-        # Load image + resize agar pas 250x250
+        
+        # Load logic
         img = Image.open(path)
-        img = img.resize((250, 250))
-
-        # Convert ke format yang bisa ditampilkan di CTkLabel
+        # Ratio aspect resize agar rapi
+        base_width = 300
+        w_percent = (base_width / float(img.size[0]))
+        h_size = int((float(img.size[1]) * float(w_percent)))
+        # Batasi tinggi max
+        if h_size > 300: h_size = 300
+        
+        img = img.resize((base_width, h_size), Image.Resampling.LANCZOS)
         self.preview_image = ImageTk.PhotoImage(img)
         self.image_label.configure(image=self.preview_image, text="")
 
-    # ------------------------------------------------------------------
-    # FUNCTION: RUN OCR
-    # ------------------------------------------------------------------
     def run_ocr_process(self):
-        """
-        Menjalankan OCR menggunakan modul core/ocr_processor.py
-
-        LANGKAH:
-        1. Pastikan ada gambar
-        2. Panggil run_ocr(path)
-        3. Tampilkan hasil di textbox
-        """
         if self.loaded_image_path is None:
             self.ocr_textbox.delete("0.0", "end")
-            self.ocr_textbox.insert("0.0", "ERROR: No image uploaded.")
+            self.ocr_textbox.insert("0.0", "⚠️ ERROR: Harap upload gambar terlebih dahulu.")
             return
+        
+        # UI Feedback
+        self.ocr_textbox.delete("0.0", "end")
+        self.ocr_textbox.insert("0.0", "Sedang memproses OCR...\nMohon tunggu...")
+        self.update() # Force update UI
 
-        # Jalankan OCR
         text_result = run_ocr(self.loaded_image_path)
-
-        # Tampilkan hasil OCR
         self.ocr_textbox.delete("0.0", "end")
         self.ocr_textbox.insert("0.0", text_result)
