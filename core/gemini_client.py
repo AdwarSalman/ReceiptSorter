@@ -22,12 +22,13 @@ import requests
 # ==========================================================
 # MASUKKAN API KEY KAMU DI SINI
 # ==========================================================
-API_KEY = "AIzaSyAR-dh8DzXdVYiXhdzJ4OdD2dplihtW5oA"
+API_KEY = "AIzaSyBssOifHG_tygXeVVHfs7FdTp8mfW6xudU"
 
 # Endpoint Gemini generative AI (model 1.5 Flash gratis & cepat)
+# PERBAIKAN (Ganti bagian ini)
 API_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-1.5-flash-latest:generateContent?key="
+    "gemini-2.5-flash:generateContent?key="
 )
 
 

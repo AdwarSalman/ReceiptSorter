@@ -59,14 +59,18 @@ class MainWindow(ctk.CTkFrame):
         # Tab 1: OCR
         tab_ocr_frame = self.tab_view.add("OCR")
         self.tab_ocr = TabOCR(tab_ocr_frame)
+        self.tab_ocr.pack(fill="both", expand=True)
 
         # Tab 2: Classification
         tab_classify_frame = self.tab_view.add("Classification")
         self.tab_classify = TabClassify(tab_classify_frame)
+        self.tab_classify.pack(fill="both", expand=True)
 
         # Tab 3: Insight
         tab_insight_frame = self.tab_view.add("Insight")
         self.tab_insight = TabInsight(tab_insight_frame)
+        self.tab_insight.pack(fill="both", expand=True)
+
 
         # ------------------------------------------------------------
         # NOTE:
