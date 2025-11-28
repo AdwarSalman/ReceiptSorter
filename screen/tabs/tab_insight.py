@@ -1,106 +1,95 @@
-"""
-tab_insight.py
-----------------
-Tab Insight adalah Chat-Based Assistant yang menggunakan model
-Gemini untuk memberikan insight finansial, summary, penjelasan kategori,
-deteksi anomali, dan menjawab pertanyaan pengguna.
-
-Fitur:
-1. Textbox besar untuk percakapan
-2. Input field untuk mengirim pertanyaan
-3. Tombol Send
-4. Terhubung dengan core/gemini_client.py (fungsi ask_gemini)
-
-UI tetap memakai tema gelap modern.
-"""
-
 import customtkinter as ctk
 from core.gemini_client import ask_gemini
 
-
 class TabInsight(ctk.CTkFrame):
-    """
-    TabInsight menyediakan interface chat antara user dan Gemini.
-    """
-
     def __init__(self, master):
-        super().__init__(master, fg_color="#101010")
+        super().__init__(master, fg_color="transparent")
 
-        # Layout
+        # Layout utama
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
-        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1) # Chat history area
+        self.grid_rowconfigure(1, weight=0) # Input area (fixed height)
 
-        # --------------------------------------------------------------
-        # TEXTBOX CHAT (HISTORY)
-        # --------------------------------------------------------------
+        # ==========================================================
+        # 1. CHAT HISTORY CONTAINER
+        # ==========================================================
+        # Kita bungkus dalam frame agar punya border halus
+        chat_container = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
+        chat_container.grid(row=0, column=0, sticky="nsew", padx=0, pady=(10, 10))
+        chat_container.grid_columnconfigure(0, weight=1)
+        chat_container.grid_rowconfigure(0, weight=1)
+
+        # Textbox Chat (Read Only style look)
         self.chat_box = ctk.CTkTextbox(
-            self,
-            width=600,
-            height=430,
-            fg_color="#181818",
+            chat_container,
+            font=("Roboto", 15),
+            fg_color="#1E1E1E", # Blend dengan container
             text_color="#DDDDDD",
-            font=ctk.CTkFont(size=14)
+            wrap="word",
+            corner_radius=0
         )
         self.chat_box.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        
+        # Pesan pembuka
+        self.chat_box.insert("0.0", "🤖 Gemini AI: Halo! Saya siap membantu menganalisis pengeluaranmu.\n\n")
 
-        # --------------------------------------------------------------
-        # INPUT FRAME (UNTUK KIRIM PESAN)
-        # --------------------------------------------------------------
-        input_frame = ctk.CTkFrame(self, fg_color="#181818")
-        input_frame.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 15))
-
+        # ==========================================================
+        # 2. INPUT AREA (MODERN PILL SHAPE)
+        # ==========================================================
+        input_frame = ctk.CTkFrame(self, fg_color="transparent")
+        input_frame.grid(row=1, column=0, sticky="ew", padx=0, pady=(0, 10))
         input_frame.grid_columnconfigure(0, weight=1)
 
-        # Input field
+        # Entry Field yang Bulat (Pill Shape)
         self.entry = ctk.CTkEntry(
             input_frame,
-            placeholder_text="Tanyakan apa saja tentang pengeluaran, kategori, anomali...",
-            fg_color="#202020",
-            text_color="#EEEEEE",
-            font=ctk.CTkFont(size=14)
+            placeholder_text="Tanyakan sesuatu... (Misal: 'Analisis struk ini')",
+            height=50, # Lebih tinggi biar lega
+            corner_radius=25, # Membuat ujungnya bulat penuh
+            fg_color="#151515",
+            border_width=1,
+            border_color="#444444",
+            text_color="white",
+            font=("Roboto", 14)
         )
-        self.entry.grid(row=0, column=0, sticky="ew", padx=(10, 10), pady=10)
+        self.entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        
+        # Bind tombol Enter untuk kirim
+        self.entry.bind("<Return>", lambda event: self.send_message())
 
         # Tombol Send
         send_btn = ctk.CTkButton(
             input_frame,
-            text="Send",
+            text="➤ Kirim",
+            width=100,
+            height=50,
+            corner_radius=25,
             fg_color="#7A3DB8",
             hover_color="#5A2B8A",
-            width=80,
+            font=("Roboto", 14, "bold"),
             command=self.send_message
         )
-        send_btn.grid(row=0, column=1, padx=(0, 10), pady=10)
+        send_btn.grid(row=0, column=1, sticky="e")
 
-    # =================================================================
-    # FUNCTION: SEND MESSAGE
-    # =================================================================
     def send_message(self):
-        """
-        Proses kirim pesan ke Gemini:
-        1. Ambil teks dari entry
-        2. Tampilkan di chat_box
-        3. Panggil ask_gemini(prompt)
-        4. Tampilkan respons AI
-
-        Jika input kosong → tidak melakukan apa pun.
-        """
         user_text = self.entry.get().strip()
+        if not user_text: return
 
-        if not user_text:
-            return  # ignore pesan kosong
-
-        # Tampilkan pesan user ke chat window
-        self.chat_box.insert("end", f"\nYou: {user_text}\n")
+        # Tampilkan pesan user
+        self.chat_box.insert("end", f"\n👤 You: {user_text}\n")
         self.chat_box.see("end")
-
-        # Kosongkan entry
+        
+        # Clear entry & Disable sementara (efek loading)
         self.entry.delete(0, "end")
+        self.entry.configure(placeholder_text="Sedang mengetik...")
+        self.update()
 
-        # Dapatkan jawaban dari Gemini
+        # Panggil API
         ai_response = ask_gemini(user_text)
 
-        # Tampilkan respons
-        self.chat_box.insert("end", f"Gemini: {ai_response}\n")
+        # Tampilkan balasan AI
+        self.chat_box.insert("end", f"\n🤖 Gemini: {ai_response}\n")
+        self.chat_box.insert("end", "-"*40 + "\n") # Separator line
         self.chat_box.see("end")
+        
+        
