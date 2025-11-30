@@ -4,7 +4,7 @@ from core.backward_chain import backward_reasoning
 
 class TabClassify(ctk.CTkFrame):
     def __init__(self, master):
-        super().__init__(master, fg_color="transparent") # Ikut warna background utama
+        super().__init__(master, fg_color="transparent")
 
         # Layout Grid 50:50
         self.grid_columnconfigure(0, weight=1)
@@ -24,7 +24,7 @@ class TabClassify(ctk.CTkFrame):
         lbl_left = ctk.CTkLabel(left_card, text="⌨️ Input Teks Struk", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
         lbl_left.grid(row=0, column=0, pady=20)
 
-        # Textbox Input (Background sedikit lebih gelap dari kartu)
+        # Textbox Input
         self.input_box = ctk.CTkTextbox(
             left_card,
             font=("Roboto", 14),
@@ -36,7 +36,7 @@ class TabClassify(ctk.CTkFrame):
         )
         self.input_box.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
 
-        # Tombol Klasifikasi (Warna Utama/Primary)
+        # Tombol Klasifikasi
         classify_btn = ctk.CTkButton(
             left_card,
             text="🔍 Analisis Kategori",
@@ -44,13 +44,13 @@ class TabClassify(ctk.CTkFrame):
             height=45,
             fg_color="#7A3DB8",
             hover_color="#5A2B8A",
-            corner_radius=20, # Lebih bulat
+            corner_radius=20,
             command=self.run_classification
         )
         classify_btn.grid(row=2, column=0, padx=20, pady=(0, 25), sticky="ew")
 
         # ==========================================================
-        # KARTU KANAN: HASIL KLASIFIKASI
+        # KARTU KANAN: HASIL KLASIFIKASI (RICH UI)
         # ==========================================================
         right_card = ctk.CTkFrame(self, fg_color="#1E1E1E", corner_radius=15, border_width=1, border_color="#333333")
         right_card.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=10)
@@ -62,50 +62,115 @@ class TabClassify(ctk.CTkFrame):
         lbl_right = ctk.CTkLabel(right_card, text="📊 Hasil & Reasoning AI", font=("Roboto", 18, "bold"), text_color="#FFFFFF")
         lbl_right.grid(row=0, column=0, pady=20)
 
-        # Textbox Output (Menggunakan Font Monospace 'Consolas' agar tabel rapi)
-        self.result_box = ctk.CTkTextbox(
+        # GANTI TEXTBOX DENGAN SCROLLABLE FRAME
+        # Agar bisa memasukkan elemen warna-warni (Label/Button)
+        self.result_container = ctk.CTkScrollableFrame(
             right_card,
-            font=("Consolas", 14), 
-            fg_color="#151515",
-            text_color="#00E676", # Warna hijau matrix/terminal
-            corner_radius=10,
-            border_width=1,
-            border_color="#333333"
+            fg_color="transparent", # Transparan agar menyatu
+            label_text=""
         )
-        self.result_box.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 25))
+        self.result_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 25))
+        self.result_container.grid_columnconfigure(0, weight=1)
+
+        # Placeholder Text awal
+        self.placeholder_lbl = ctk.CTkLabel(
+            self.result_container, 
+            text="Belum ada analisis.\nSilakan masukkan teks & klik tombol.",
+            font=("Roboto", 14),
+            text_color="gray"
+        )
+        self.placeholder_lbl.pack(pady=50)
 
     def run_classification(self):
         text = self.input_box.get("0.0", "end").strip()
 
+        # 1. Bersihkan hasil lama (Clear Widgets)
+        for widget in self.result_container.winfo_children():
+            widget.destroy()
+
         if not text:
-            self.result_box.delete("0.0", "end")
-            self.result_box.insert("0.0", "⚠️ ERROR: Text input is empty.")
+            err = ctk.CTkLabel(self.result_container, text="⚠️ Teks kosong!", text_color="#FF5252")
+            err.pack(pady=20)
             return
 
-        # STEP 1 → Klasifikasi dengan heuristic
+        # 2. Jalankan Logika (Sama seperti sebelumnya)
         best_category, score_table = classify_text(text)
-
-        # STEP 2 → Reasoning backward chaining
         reasoning_tokens = backward_reasoning(text, best_category)
 
-        # Susun output yang rapi
-        output = "=== CLASSIFICATION RESULT ===\n\n"
-        output += f"🏆 KATEGORI TERBAIK: {best_category.upper()}\n"
-        output += "="*30 + "\n\n"
+        # ==========================================================
+        # 3. RENDER HASIL (BERWARNA & MODERN)
+        # ==========================================================
+        
+        # A. Bagian Judul Kategori (Besar & Berwarna)
+        lbl_title = ctk.CTkLabel(
+            self.result_container, 
+            text="KATEGORI TERBAIK:", 
+            font=("Roboto", 12, "bold"), 
+            text_color="#AAAAAA"
+        )
+        lbl_title.pack(anchor="w", pady=(10, 0))
 
-        output += "--- Skor per Kategori ---\n"
-        # Format tabel rapi
-        for k, v in score_table.items():
-            output += f"{k.ljust(25)} : {v}\n"
+        # Teks Kategori Besar (Hijau Neon seperti Video)
+        lbl_category = ctk.CTkLabel(
+            self.result_container,
+            text=best_category.upper(),
+            font=("Arial", 28, "bold"),
+            text_color="#00E676" # Warna Hijau Matrix
+        )
+        lbl_category.pack(anchor="w", pady=(0, 20))
 
-        output += "\n--- Reasoning (Why?) ---\n"
+        # B. Divider (Garis Pembatas Halus)
+        divider = ctk.CTkFrame(self.result_container, height=2, fg_color="#333333")
+        divider.pack(fill="x", pady=(0, 20))
+
+        # C. Bagian Reasoning (List Items)
+        lbl_reason = ctk.CTkLabel(
+            self.result_container,
+            text="🔍 Reasoning (Kata Kunci Ditemukan):",
+            font=("Roboto", 14, "bold"),
+            text_color="white"
+        )
+        lbl_reason.pack(anchor="w", pady=(0, 10))
+
         if reasoning_tokens:
-            output += "Token kata kunci ditemukan:\n"
             for token in reasoning_tokens:
-                output += f" ✅ {token}\n"
+                # Buat "Card" kecil untuk setiap token
+                token_card = ctk.CTkFrame(self.result_container, fg_color="#2B2B2B", corner_radius=8)
+                token_card.pack(fill="x", pady=5)
+                
+                # Ikon Centang Hijau
+                icon = ctk.CTkLabel(token_card, text="✅", font=("Arial", 16))
+                icon.pack(side="left", padx=10, pady=8)
+                
+                # Teks Token
+                txt = ctk.CTkLabel(token_card, text=token, font=("Consolas", 14, "bold"), text_color="#E0E0E0")
+                txt.pack(side="left", padx=5)
         else:
-            output += "⚠️ Tidak ditemukan keyword spesifik.\n(Skor mungkin 0 atau default)\n"
+            # Jika tidak ada token (misal kategori unknown)
+            lbl_none = ctk.CTkLabel(
+                self.result_container, 
+                text="⚠️ Tidak ditemukan kata kunci spesifik.\n(Skor kategori mungkin 0)", 
+                text_color="#FFB74D",
+                justify="left"
+            )
+            lbl_none.pack(anchor="w", pady=5)
 
-        # Munculkan di textbox
-        self.result_box.delete("0.0", "end")
-        self.result_box.insert("0.0", output)
+        # D. Bagian Score Detail (Opsional, dikecilkan di bawah)
+        lbl_details = ctk.CTkLabel(
+            self.result_container,
+            text="\n--- Detail Skor ---",
+            font=("Roboto", 12),
+            text_color="gray"
+        )
+        lbl_details.pack(pady=(20, 5))
+
+        # Tampilkan skor dalam label kecil
+        scores_str = "\n".join([f"{k}: {v}" for k, v in score_table.items()])
+        lbl_scores = ctk.CTkLabel(
+            self.result_container,
+            text=scores_str,
+            font=("Consolas", 11),
+            text_color="gray",
+            justify="center"
+        )
+        lbl_scores.pack()
